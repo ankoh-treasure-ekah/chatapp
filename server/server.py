@@ -6,7 +6,7 @@ from person import Person
 from ipparser import ipparser
 
 # Global constants
-Host = '192.168.100.162'
+Host = "localhost"
 PORT = 5500
 BUFSIZE = 1024
 ADDR = (Host, PORT)
@@ -59,6 +59,8 @@ def broadcast(msg, name):
                 print("[ERROR] broadcast normal messages", e)
                 continue
 
+    print("completed all Transfers")
+
 
 def client_communication(person):
     """
@@ -73,6 +75,7 @@ def client_communication(person):
 
     # get person name
     name = client.recv(BUFSIZE).decode("utf-8")
+    person.name = name
     msg = bytes(f'{name} has joined the chat', "utf-8")
     broadcast(msg, "")
 
@@ -82,11 +85,10 @@ def client_communication(person):
             msg = client.recv(BUFSIZE)
             print(f"{name}: ", msg.decode("utf-8"))
             if msg == bytes("{quit}", "utf-8"):
+                persons.remove(person)
                 msg = bytes(name + " has left the chat", "utf-8")
-                client.send(bytes("{quit}", "utf-8"))
                 client.close()
                 broadcast(msg, "")
-                persons.remove(person)
 
             elif msg == bytes("sending", "utf-8"):
                 receiving_file = True
@@ -96,13 +98,16 @@ def client_communication(person):
                     global file_name
                     file_name = client.recv(BUFSIZE).decode("utf-8")
                     file_size = client.recv(BUFSIZE).decode("utf-8")
+                    print(f"file size {file_size}")
                     with open(file_name, "wb") as file:
-                        while size <= int(file_size):
+                        while size < int(file_size):
                             data = client.recv(BUFSIZE)
                             if not data:
                                 break
                             file.write(data)
                             size += len(data)
+                            print(len(data))
+                            print(size)
                     print("beginning transfer")
                     broadcast(file_name, name)
                     # receiving_file = False
