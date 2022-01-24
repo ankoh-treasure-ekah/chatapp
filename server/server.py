@@ -1,4 +1,6 @@
+import json
 import os
+import time
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 import datetime
@@ -17,6 +19,7 @@ SERVER.bind(ADDR)
 # Global variables
 receiving_file = False
 persons = []
+names = []
 
 
 def broadcast(msg, name):
@@ -53,13 +56,37 @@ def broadcast(msg, name):
         print(persons)
         for person in persons:
             try:
+                if msg.split()[-1] == "Default":
+                    msg = msg.replace("Default", "")
                 client = person.client
-                client.send(bytes(name + ": ", "utf-8") + msg)
+                if name != "":
+                    client.send(bytes(name + ": ", "utf-8") + msg)
+                    print("yes")
+                    print(name)
+                else:
+                    client.send(msg)
+                print("no")
             except Exception as e:
                 print("[ERROR] broadcast normal messages", e)
                 continue
 
     print("completed all Transfers")
+
+
+def uni_send_name(client, msg):
+    print("unisendname_msg", msg)
+    client.send(bytes("true "+msg, "utf-8"))
+    print('unisendname', "done")
+
+
+def uni_send(client, msg, sender):
+    msg = msg.decode('utf-8')
+    remove = msg.split()[-1]
+    client.send(bytes(sender + ": ", "utf-8") + bytes(msg.replace(remove, ""), 'utf-8'))
+    for person in persons:
+        if person.name == sender:
+            client = person.client
+            client.send(bytes(sender + ": ", "utf-8") + bytes(msg.replace(remove, ""), 'utf-8'))
 
 
 def client_communication(person):
@@ -76,6 +103,48 @@ def client_communication(person):
     # get person name
     name = client.recv(BUFSIZE).decode("utf-8")
     person.name = name
+    names.append(name)
+
+    # send to user how many users are present
+    user_list = []
+    for person in persons:
+        try:
+            client_for_person = person.client
+            name_for_person = person.name
+            print(person.name)
+            user_list.append(name)
+            uni_send_name(client_for_person, name)
+            time.sleep(1)
+        except Exception as e:
+            print("uni: ", e)
+
+    time.sleep(8)
+    for person in persons:
+        thisname = person.name
+        if thisname == name:
+            clienthere = person.client
+            print('names', names)
+            for item in names:
+                print("item", item)
+                if item != name:
+                    uni_send_name(clienthere, item)
+                    time.sleep(2)
+
+    # uni_send_name(client, user_list)
+
+    # create a json file to hold all the users connected
+    # json_obj = {}
+    #
+    # with open("client/users.json", "w") as file:
+    #     json.dump(json_obj, file)
+    #
+    # with open(name, 'r+') as file:
+    #     json_dump = json.load(file)
+    #
+    # json_dump[name] = name
+    # with open(name, 'w') as file:
+    #     json.dump(json_dump, file)
+
     msg = bytes(f'{name} has joined the chat', "utf-8")
     broadcast(msg, "")
 
@@ -113,7 +182,19 @@ def client_communication(person):
                     # receiving_file = False
 
             else:
-                broadcast(msg, name)
+                if names.__contains__(msg.decode('utf-8').split()[-1]):
+                    for person in persons:
+                        current_name = person.name
+                        client_uni_send = person.client
+                        print('receiver: ', msg.split()[-1])
+                        print(current_name)
+                        receiver = msg.decode('utf-8').split()[-1]
+                        print('decoded receiver: ', receiver)
+                        if receiver == current_name:
+                            uni_send(client_uni_send, msg, name)
+
+                else:
+                    broadcast(msg, name)
         except Exception as e:
             print(msg.decode("utf-8"))
             broadcast(msg, "")

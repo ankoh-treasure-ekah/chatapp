@@ -5,6 +5,7 @@ import os
 import tkinter as tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import *
+import json
 
 window = tk.Tk()
 window.withdraw()
@@ -56,13 +57,21 @@ go.place(relx=0.4,
 
 
 def proceed(name: str):
-    login.destroy()
-    begin_receive_thread()
-    layout(name)
+    global username
+    username = name
 
+    login.destroy()
+    begin_receive_thread(username)
+    # layout_thread = Thread(target=layout, arg)
+    layout(name)
+    # active_users_thread = Thread(target=active_users)
+    # active_users_thread.start()
+
+
+# def active_users():
 
 window.title("Seven Transfer")
-names = ('treasure', 'princess')
+names = ['Default']
 pnames = StringVar(value=names)
 message1 = "treasure: hello"
 message2 = "boy: hi"
@@ -83,6 +92,7 @@ system_busy = False
 receiving_file = False
 server_active = False
 messaging_box = False
+current_selection: int = 5000
 
 try:
     client_socket = socket(AF_INET, SOCK_STREAM)
@@ -100,12 +110,38 @@ def receive_messages():
     :return: None
     """
     global server_active
+    call_lbox = False
     global textCons
     while True:
         try:
             msg = client_socket.recv(BUFSIZE).decode("utf-8")
             messages.append(msg)
             print(msg)
+            if msg.split()[0] == "true":
+                if names.__contains__(msg.split()[1]):
+                    pass
+                else:
+                    print('appending', msg.split()[1])
+                    names.append(msg.split()[1])
+                    if call_lbox:
+                        update_listbox()
+                    else:
+                        call_lbox = True
+
+            print(names)
+
+            if msg.__contains__(":"):
+                if not lbox.curselection() == ():
+                    name = msg.split(":")[0]
+                    if name != username:
+                        create_message_file(name, msg)
+                    selection = str(lbox.curselection())
+                    selection = selection[1]
+                    name = names[int(selection)]
+                    create_message_file(name, msg)
+
+                create_message_file("broadcast", msg)
+
             if messaging_box:
                 textCons.config(state=NORMAL)
                 textCons.insert(END,
@@ -137,25 +173,28 @@ def send_file_message(msg, incoming_file: bool = False):
     try:
         if not incoming_file:
             client_socket.send(bytes(msg, "utf-8"))
+            print(msg)
+            if msg.split()[-1] == "Default":
+                msg = msg.replace('Default', "")
             if msg == "{quit}":
                 client_socket.close()
                 quit()
         elif incoming_file:
             client_socket.sendall(bytes(msg))
     except Exception as e:
-        print("[ERROR], e")
+        print("[ERROR] send_file_message, e")
         server_active = False
 
 
-def begin_receive_thread():
+def begin_receive_thread(username):
     """
     this piece of code starts a new thread for the receive_message function so as to have concurrent processing with the
     send_file_message function"""
     receive_thread = Thread(target=receive_messages)
     receive_thread.start()
     print("started")
-
-    send_file_message("treasure")
+    print(username)
+    send_file_message(username)
     time.sleep(5)
 
 
@@ -218,7 +257,7 @@ def send_thread(*args):
 
 # while loop to keep taking commands from user
 def send(*args):
-    global sending_file
+    global sending_file, message
     if server_active:
         try:
             time.sleep(1)
@@ -236,17 +275,115 @@ def send(*args):
                     # send_file_message("sending")
                     # sending_file = True
                     # __sending_file()
-                send_file_message(message)
+
+                selection = str(lbox.curselection())
+                selection = selection[1]
+                name = names[int(selection)]
+                fmessage = f'{message} {name}'
+
+                send_file_message(fmessage)
+                print(fmessage)
                 message_entry.delete(0, tk.END)
         except Exception as e:
-            print("[ERROR]", e)
+            print("[ERROR] send", e)
+            try:
+                send_file_message(message)
+                message_entry.delete(0, tk.END)
+            except Exception as e:
+                print("[ERROR]send send: ", e)
             return
+
+
+def create_message_file(name, message):
+    first_input = True
+    findex = 0
+
+    name = f'{name}.json'
+    if not os.path.exists(name):
+        json_obj = {}
+
+        with open(name, "w") as jsonfile:
+            json.dump(json_obj, jsonfile)
+
+        with open(name, 'r+') as file:
+            json_dump = json.load(file)
+
+        json_dump["name"] = "start"
+        with open(name, 'w') as file:
+            json.dump(json_dump, file)
+
+    with open(name, "r") as f:
+        json_dump = json.load(f)
+        print(json_dump)
+        print(name)
+        listkeys = json_dump.keys()
+        listkeys = list(listkeys)
+        litem = listkeys[-1]
+        lindex = listkeys.index(litem)
+        # print(file)
+
+    with open(name, 'r+') as file:
+        json_dump = json.load(file)
+
+    json_dump[f'{name}{str(lindex)}'] = message
+    with open(name, 'w') as file:
+        json.dump(json_dump, file)
+
+
+def handle_user_select(*args):
+    global current_selection
+    try:
+        selection = str(lbox.curselection())
+        selection = selection[1]
+        if selection != current_selection:
+            textCons.config(state=NORMAL)
+            textCons.delete('1.0', END)
+
+            # inserting new data to the field
+
+            with open(f'{names[int(selection)]}.json', 'r') as file:
+                json_dump = json.load(file)
+                for value in json_dump.values():
+                    textCons.insert(END, value + "\n\n")
+
+            print(selection)
+            print(names[int(selection)])
+            current_selection = selection
+            textCons.config(state=DISABLED)
+            return
+    except Exception as e:
+        print('handle user: ', e)
+
+
+def update_listbox(users_frame=None ):
+    global lbox
+    lbox.insert(END, names[-1])
+    # while True:
+    #     time.sleep(5)
+    #     pnames = StringVar(value=names)
+    #     global lbox
+    #     lbox.destroy()
+    #
+    #     lbox = Listbox(users_frame,
+    #                    listvariable=pnames,
+    #                    font="Helvetica 20 bold",
+    #                    selectbackground="#17202A",
+    #                    justify='center',
+    #                    activestyle='dotbox',
+    #                    height=10)
+    #     try:
+    #         lbox.pack(fill=BOTH, expand=1, padx=8, pady=5)
+    #         lbox.bind('<<ListboxSelect>>', handle_user_select)
+    #     except Exception as e:
+    #         print("update lbox: ", e)
+    #         return
 
 
 def layout(name):
     global message_entry
     global textCons
     global messaging_box
+    global lbox
     messaging_box = True
     try:
         window.deiconify()
@@ -306,8 +443,10 @@ def layout(name):
         # scroll_y = tk.Scrollbar(message_button_frame, orient="vertical", command=canvas.yview)
 
         # configure responsiveness
-        users_frame.columnconfigure(0, weight=1)
-        users_frame.columnconfigure(1, weight=1)
+        # users_frame.columnconfigure(0, weight=1)
+        # users_frame.columnconfigure(1, weight=1)
+        # users_frame.rowconfigure(0, weight=1)
+        # users_frame.rowconfigure(1, weight=1)
 
         message_button_frame.columnconfigure(0, weight=1)
         message_button_frame.columnconfigure(1, weight=1)
@@ -326,10 +465,17 @@ def layout(name):
         _messages.grid(row=0, column=0, columnspan=2, rowspan=2, sticky="news")
 
         # all widgets
-        lbox = Listbox(users_frame, listvariable=pnames, height=10)
+        lbox = Listbox(users_frame,
+                       listvariable=pnames,
+                       font="Helvetica 20 bold",
+                       selectbackground="#17202A",
+                       justify='center',
+                       activestyle='dotbox',
+                       height=10)
         users_label = tk.Label(users_frame,
                                text="Active Users",
-                               borderwidth=2, relief=tk.RIDGE, bg="#17202A", fg="white", font="Helvetica 10 bold")
+                               borderwidth=2,
+                               relief=tk.RIDGE, bg="#17202A", fg="white", font="Helvetica 15 bold", pady=5)
         message_entry = tk.Entry(buttons_frame, width=39)
         send_btn = tk.Button(buttons_frame,
                              text="Send",
@@ -340,13 +486,17 @@ def layout(name):
                               bg="#17202A", fg="white", command=open_file, font="Helvetica 10 bold")
 
         # binding widgets
-        users_label.grid(row=0, column=0, columnspan=2, sticky="news")
+        users_label.pack(fill=BOTH)
         send_btn.grid(row=0, column=1, columnspan=2, sticky="esw", pady=32, padx=4)
         message_entry.grid(row=0, column=0, sticky="swe", pady=35, padx=2)
         send_file.grid(row=0, columnspan=2, column=0, sticky="swe", padx=4, pady=5)
         message_entry.bind('<Return>', send_thread)
 
-        lbox.grid(row=1, column=0, columnspan=2, sticky="news")
+        lbox.pack(fill=BOTH, expand=1, padx=8, pady=5)
+        lbox.bind('<<ListboxSelect>>', handle_user_select)
+        update_lisbox = Thread(target=update_listbox, args=(users_frame,))
+        update_lisbox.start()
+
 
         window.mainloop()
     except Exception as e:
