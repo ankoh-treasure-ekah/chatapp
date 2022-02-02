@@ -22,7 +22,7 @@ persons = []
 names = []
 
 
-def broadcast(msg, name):
+def broadcast(msg, name, receiver: str = None):
     global receiving_file
     """
     Code to show message to all clients on the chat
@@ -33,34 +33,75 @@ def broadcast(msg, name):
 
     if receiving_file:
         for person in persons:
-            try:
-                client = person.client
-                file_name = msg
-                file_size = os.path.getsize(file_name)
-                client.send(bytes(name + ": just sent a file ", "utf-8") + bytes(file_name, "utf-8")
-                            + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
-                with open(file_name, "rb") as file:
-                    size = 0
-                    while size <= file_size:
-                        data = file.read(BUFSIZE)
-                        if not data:
-                            break
-                        client.sendall(bytes(data))
-                print("transfer completed...")
-                receiving_file = False
-            except Exception as e:
-                print("[ERROR] broadcast files", e)
-                receiving_file = False
+            if receiver:
+                if person.name == receiver:
+                    try:
+                        client = person.client
+                        file_name = msg
+                        file_size = os.path.getsize(file_name)
+                        client.send(bytes(name + ": just sent a file ", "utf-8") + bytes(file_name, "utf-8")
+                                    + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
+                        with open(file_name, "rb") as file:
+                            size = 0
+                            while size <= file_size:
+                                data = file.read(BUFSIZE)
+                                if not data:
+                                    break
+                                client.sendall(bytes(data))
+                        print("transfer completed...")
+                        receiving_file = False
+
+                        # send message to the sender
+                        for person in persons:
+                            if person.name == name:
+                                client = person.client
+                                client.send(bytes(name + ": you transferred ", "utf-8") + bytes(file_name, "utf-8")
+                                            + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
+                    except Exception as e:
+                        print("[ERROR] broadcast files", e)
+                        receiving_file = False
+
+            else:
+                try:
+                    client = person.client
+                    file_name = msg
+                    file_size = os.path.getsize(file_name)
+                    client.send(bytes(name + ": just sent a file ", "utf-8") + bytes(file_name, "utf-8")
+                                + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
+                    with open(file_name, "rb") as file:
+                        size = 0
+                        while size <= file_size:
+                            data = file.read(BUFSIZE)
+                            if not data:
+                                break
+                            client.sendall(bytes(data))
+                    print("transfer completed...")
+                    receiving_file = False
+                except Exception as e:
+                    print("[ERROR] broadcast files", e)
+                    receiving_file = False
 
     else:
         print(persons)
         for person in persons:
             try:
+                print(msg.split())
                 if msg.split()[-1] == "Default":
                     msg = msg.replace("Default", "")
+
+                if type(msg) == str:
+                    if msg.split()[-1] == "Broadcast":
+                        msg = msg.replace('Broadcast', "")
+                        print("message with default removed", msg)
+
+                else:
+                    if msg.decode('utf-8').split()[-1] == "Broadcast":
+                        msg = msg.decode('utf-8').replace('Broadcast', "")
+                        print("message with default removed", msg)
+
                 client = person.client
                 if name != "":
-                    client.send(bytes(name + ": ", "utf-8") + msg)
+                    client.send(bytes(name + ": ", "utf-8") + bytes(msg, "utf-8"))
                     print("yes")
                     print(name)
                 else:
@@ -75,12 +116,13 @@ def broadcast(msg, name):
 
 def uni_send_name(client, msg):
     print("unisendname_msg", msg)
-    client.send(bytes("true "+msg, "utf-8"))
+    client.send(bytes("true " + msg, "utf-8"))
     print('unisendname', "done")
 
 
 def uni_send(client, msg, sender):
     msg = msg.decode('utf-8')
+    print("uni send printing message")
     remove = msg.split()[-1]
     client.send(bytes(sender + ": ", "utf-8") + bytes(msg.replace(remove, ""), 'utf-8'))
     for person in persons:
@@ -98,7 +140,7 @@ def client_communication(person):
     """
     run = True
     client = person.client
-    global receiving_file
+    global receiving_file, send_to
 
     # get person name
     name = client.recv(BUFSIZE).decode("utf-8")
@@ -159,27 +201,46 @@ def client_communication(person):
                 client.close()
                 broadcast(msg, "")
 
-            elif msg == bytes("sending", "utf-8"):
-                receiving_file = True
+            elif msg.__contains__(bytes("sending", "utf-8")):
+                try:
+                    print("receiving set to true")
+                    receiving_file = True
+                    sending_to = msg.decode('utf-8').split()[-1]
+                    if names.__contains__(sending_to):
+                        send_to = sending_to
+                        print('sending to', send_to)
 
-                if receiving_file:
-                    size = 0
-                    global file_name
-                    file_name = client.recv(BUFSIZE).decode("utf-8")
-                    file_size = client.recv(BUFSIZE).decode("utf-8")
-                    print(f"file size {file_size}")
-                    with open(file_name, "wb") as file:
-                        while size < int(file_size):
-                            data = client.recv(BUFSIZE)
-                            if not data:
-                                break
-                            file.write(data)
-                            size += len(data)
-                            print(len(data))
-                            print(size)
-                    print("beginning transfer")
-                    broadcast(file_name, name)
-                    # receiving_file = False
+                    elif msg.__contains__(bytes("Broadcast", "utf-8")):
+                        send_to = "Broadcast"
+                        print('broadcast sent to')
+
+                    if receiving_file:
+                        size = 0
+                        global file_name
+                        file_name = client.recv(BUFSIZE).decode("utf-8")
+                        file_size = client.recv(BUFSIZE).decode("utf-8")
+                        print(f"file size {file_size}")
+                        with open(file_name, "wb") as file:
+                            while size < int(file_size):
+                                data = client.recv(BUFSIZE)
+                                if not data:
+                                    break
+                                file.write(data)
+                                size += len(data)
+                                print(len(data))
+                                print(size)
+                        print("beginning transfer")
+
+                        if names.__contains__(send_to):
+                            print("sending to one")
+                            broadcast(file_name, name, send_to)
+                        elif send_to == "Broadcast":
+                            broadcast(file_name, name)
+                        # receiving_file = False
+                except Exception as e:
+                    print("[ERROR] receiving file from client", e)
+                    receiving_file = False
+                    continue
 
             else:
                 if names.__contains__(msg.decode('utf-8').split()[-1]):
@@ -192,15 +253,17 @@ def client_communication(person):
                         print('decoded receiver: ', receiver)
                         if receiver == current_name:
                             uni_send(client_uni_send, msg, name)
+                            print("uni send sent a message")
 
                 else:
                     broadcast(msg, name)
         except Exception as e:
             print(msg.decode("utf-8"))
-            broadcast(msg, "")
+            # broadcast(msg, "")
             print("[EXCEPTION] client_communication ", e)
             msg = bytes(name + " has left the chat", "utf-8")
             print(msg)
+            broadcast(msg, "")
             break
 
 

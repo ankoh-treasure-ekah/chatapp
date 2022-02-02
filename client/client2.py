@@ -1,3 +1,4 @@
+import subprocess
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 import time
@@ -6,6 +7,14 @@ import tkinter as tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import *
 import json
+from datetime import datetime
+from colorama import init, Fore
+
+init()
+
+blue = Fore.BLUE
+green = Fore.GREEN
+
 
 window = tk.Tk()
 window.withdraw()
@@ -50,6 +59,7 @@ entryName.focus()
 go = Button(login,
             text="CONTINUE",
             font="Helvetica 14 bold",
+            defaul=ACTIVE,
             command=lambda: proceed(entryName.get()))
 
 go.place(relx=0.4,
@@ -57,6 +67,11 @@ go.place(relx=0.4,
 
 
 def proceed(name: str):
+    """
+    used to take the name entered in the login screen and proceed to the actual chat app
+    :param name: this is the name entered in the login screen
+    :return: none
+    """
     global username
     username = name
 
@@ -71,11 +86,8 @@ def proceed(name: str):
 # def active_users():
 
 window.title("Seven Transfer")
-names = ['Default']
+names = ['Broadcast']
 pnames = StringVar(value=names)
-message1 = "treasure: hello"
-message2 = "boy: hi"
-# from server.server import receiving_file
 
 # Global constants
 PORT = 5500
@@ -93,6 +105,7 @@ receiving_file = False
 server_active = False
 messaging_box = False
 current_selection: int = 5000
+n: int = 20
 
 try:
     client_socket = socket(AF_INET, SOCK_STREAM)
@@ -101,6 +114,7 @@ try:
 except Exception as e:
     print("cannot connect to the server. please try again later.")
     server_active = False
+    quit()
 
 
 def receive_messages():
@@ -109,18 +123,20 @@ def receive_messages():
     and also to print all messages of the sender.
     :return: None
     """
-    global server_active
+    global server_active, n, file_name
     call_lbox = False
-    global textCons
+    print("inside receive func")
     while True:
         try:
+            print("inside receive loop")
             msg = client_socket.recv(BUFSIZE).decode("utf-8")
             messages.append(msg)
-            print(msg)
+            print("reeveied", msg)
             if msg.split()[0] == "true":
                 if names.__contains__(msg.split()[1]):
                     pass
                 else:
+                    print('appending', msg.split()[1])
                     names.append(msg.split()[1])
                     if call_lbox:
                         update_listbox()
@@ -129,36 +145,111 @@ def receive_messages():
 
             print(names)
 
-            if msg.__contains__(":"):
-                if not lbox.curselection() == ():
-                    name = msg.split(":")[0]
-                    if name != username:
-                        create_message_file(name, msg)
-                    selection = str(lbox.curselection())
-                    selection = selection[1]
-                    name = names[int(selection)]
-                    create_message_file(name, msg)
+            if msg.__contains__("has left"):
+                person_who_left = msg.split()[0]
+                index = names.index(person_who_left.strip())
+                lbox.delete(index)
 
-                create_message_file("broadcast", msg)
-
-            if messaging_box:
-                textCons.config(state=NORMAL)
-                textCons.insert(END,
-                                msg + "\n\n")
-                textCons.config(state=DISABLED)
-                textCons.see(END)
             if msg.__contains__("just sent a file"):
                 msg = msg.split()
                 file_size = msg[-1]
                 file_name = msg[-2]
+                na.bind("<Double-Button-1>", button_open_file)
                 # print(msg)
+                # __receiving_file_thread = Thread(target=__receiving_file, args=(file_name, file_size, ))
+                # __receiving_file_thread.start()
                 __receiving_file(file_name, file_size)
+
+            if msg.__contains__(":"):
+                s_name = msg.split(":")[0]
+                day = datetime.now().strftime("%A")
+                month = datetime.now().strftime("%B")
+                day_num = datetime.now().day
+                year = datetime.now().year
+                time = datetime.now().strftime("%I:%H:%S")
+                if messaging_box:
+                    selection = str(lbox.curselection())
+                    selection = selection[1]
+                    name = names[int(selection)]
+                    print("seeing if name and s_name are of same format", name, s_name)
+
+                    if name == s_name:
+                        if msg.split(":")[0] == username:
+                            p = 0
+                            na = f'mess{str(p)}'
+                            na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="green",
+                                         width=150)
+                            canvas.create_window(400, n, anchor='nw', window=na)
+                            n += 80
+                            print("n", n)
+                            p += 1
+                            window.update()
+                            canvas.config(scrollregion=canvas.bbox("all"))
+                            canvas.yview_moveto(1)
+                        else:
+                            k = 0
+                            na = f'mess{str(k)}'
+                            na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="white",
+                                         width=300)
+                            canvas.create_window(100, n, anchor='nw', window=na)
+                            n += 80
+                            print("n", n)
+                            k += 1
+                            window.update()
+                            canvas.config(scrollregion=canvas.bbox("all"))
+                            canvas.yview_moveto(1)
+                    elif s_name == username:
+                        if msg.split(":")[0] == username:
+                            p = 0
+                            na = f'mess{str(p)}'
+                            na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="green",
+                                         width=150)
+                            canvas.create_window(400, n, anchor='nw', window=na)
+                            n += 80
+                            print("n", n)
+                            p += 1
+                            window.update()
+                            canvas.config(scrollregion=canvas.bbox("all"))
+                            canvas.yview_moveto(1)
+                        else:
+                            k = 0
+                            na = f'mess{str(k)}'
+                            na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="white",
+                                         width=150)
+                            canvas.create_window(100, n, anchor='nw', window=na)
+                            n += 80
+                            print("n", n)
+                            k += 1
+                            window.update()
+                            canvas.config(scrollregion=canvas.bbox("all"))
+                            canvas.yview_moveto(1)
+
+                msg = f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}'
+                if not lbox.curselection() == ():
+                    name = msg.split(":")[0]
+                    if name != username:
+                        create_message_file(name, msg)
+                    else:
+                        selection = str(lbox.curselection())
+                        selection = selection[1]
+                        name = names[int(selection)]
+                        create_message_file(name, msg)
+                else:
+
+                    create_message_file(s_name, msg)
         except Exception as e:
             print("you have been disconnected")
             server_active = False
             print("[EXCEPTION] receive_messages,", e)
             exit()
             break
+
+
+def button_open_file(event):
+    real_path = os.path.realpath(file_name)
+    dir_path = os.path.dirname(real_path)
+    subprocess.run(f'explorer {dir_path}')
+    print("yeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeees")
 
 
 def send_file_message(msg, incoming_file: bool = False):
@@ -173,7 +264,17 @@ def send_file_message(msg, incoming_file: bool = False):
         if not incoming_file:
             client_socket.send(bytes(msg, "utf-8"))
             print(msg)
-            if msg == "{quit}":
+            if msg.split()[-1] == "Default":
+                msg = msg.replace('Default', "")
+                print("message with default removed", msg)
+
+            if msg.split()[-1] == "Broadcast":
+                msg = msg.replace('Broadcast', "")
+                print("message with default removed", msg)
+
+            print("seeee", msg)
+            if msg.strip() == "{quit}":
+                print("about to quit")
                 client_socket.close()
                 quit()
         elif incoming_file:
@@ -196,6 +297,12 @@ def begin_receive_thread(username):
 
 
 def __receiving_file(file_name: str, file_size: str):
+    """
+    this function receives files from  server and stores them in the same directory the client script is stored
+    :param file_name: this is the file name of the file about to be received so the script knows how to store the file
+    :param file_size: this is the file size of the file so the script knows when the file has been received completely
+    :return: none
+    """
     try:
         size = 0
         # file_name = client_socket.recv(BUFSIZE).decode("utf-8")
@@ -215,23 +322,39 @@ def __receiving_file(file_name: str, file_size: str):
 
 
 def __sending_file(filepath: str):
+    """
+    this script sends files to the server which sends to other clients in the chat
+    :param filepath: this the location of the file in the hard dive
+    :return: none
+    """
     if sending_file:
-        send_file_message("sending")
-        file_name = os.path.basename(filepath)
-        file_size = os.path.getsize(filepath)
-        print(f"file size: {file_size}")
-        send_file_message(file_name)
-        time.sleep(2)
-        send_file_message(str(file_size))
-        time.sleep(1)
-        size = 0
-        with open(file_name, "rb") as file:
-            while size <= file_size:
-                data = file.read(BUFSIZE)
-                if not data:
-                    break
-                send_file_message(data, True)
-                size += len(data)
+        try:
+            selection = str(lbox.curselection())
+            selection = selection[1]
+            name = names[int(selection)]
+
+            send_file_message(f"sending {name}")
+            file_name = os.path.basename(filepath)
+            file_size = os.path.getsize(filepath)
+            print(f"file size: {file_size}")
+            send_file_message(file_name)
+            time.sleep(2)
+            send_file_message(str(file_size))
+            time.sleep(1)
+            size = 0
+            with open(file_name, "rb") as file:
+                while size <= file_size:
+                    data = file.read(BUFSIZE)
+                    if not data:
+                        break
+                    send_thread_2 = Thread(target=send_file_message, args=(data, True, ))
+                    send_thread_2.start()
+                    # send_file_message(data, True)
+                    size += len(data)
+
+        except Exception as e:
+            print("[ERROR]__sending file: ", e)
+            return
 
 
 # code for graphical user interface
@@ -244,10 +367,16 @@ def open_file():
     )
     if not filepath:
         return
-    __sending_file(filepath)
+    __sending_file_thread = Thread(target=__sending_file, args=(filepath, ))
+    __sending_file_thread.start()
 
 
 def send_thread(*args):
+    """
+    start thread for the send function to begin sending messages
+    :param args: used so as to receive the enum parameter from the event handler
+    :return: none
+    """
     thread_send = Thread(target=send)
     thread_send.start()
 
@@ -260,25 +389,17 @@ def send(*args):
             time.sleep(1)
             message = message_entry.get()
             if message:
-                # mess = tk.Label(_messages, text=message, bg="green", fg="white", wraplength=300)
-                # mess.pack(fill=tk.BOTH, pady=5)
-                # textCons.config(state=NORMAL)
-                # textCons.insert(END,
-                #                 message + "\n\n")
-                # textCons.config(state=DISABLED)
-                # textCons.see(END)
                 if message.__contains__("file"):
                     pass
-                    # send_file_message("sending")
-                    # sending_file = True
-                    # __sending_file()
 
                 selection = str(lbox.curselection())
                 selection = selection[1]
                 name = names[int(selection)]
                 fmessage = f'{message} {name}'
 
-                send_file_message(fmessage)
+                real_send_thread = Thread(target=send_file_message, args=(fmessage, ))
+                real_send_thread.start()
+                # send_file_message(fmessage)
                 print(fmessage)
                 message_entry.delete(0, tk.END)
         except Exception as e:
@@ -292,6 +413,12 @@ def send(*args):
 
 
 def create_message_file(name, message):
+    """
+    this script creates a json file for all clients who you have communicated with and stores all future messages
+    :param name: this is the name of the client communicating with
+    :param message: this is the message to be stored in the json file
+    :return: none
+    """
     first_input = True
     findex = 0
 
@@ -328,59 +455,91 @@ def create_message_file(name, message):
 
 
 def handle_user_select(*args):
-    global current_selection
+    """
+    this is responsible for handling what happens when the user selects or clicks on a user on the available users
+    :param args: used to receive the enum param from the event handler
+    :return: none
+    """
+    global current_selection, selection, user_name, n
     try:
         selection = str(lbox.curselection())
         selection = selection[1]
+        message_entry.config(state=NORMAL)
         if selection != current_selection:
-            textCons.config(state=NORMAL)
-            textCons.delete('1.0', END)
+            print("in selection")
+            canvas.delete("all")
 
             # inserting new data to the field
 
             with open(f'{names[int(selection)]}.json', 'r') as file:
                 json_dump = json.load(file)
                 for value in json_dump.values():
-                    textCons.insert(END, value + "\n\n")
+                    print("handle user", value)
+                    print(type(value))
+                    print("value", value.split(':')[0].strip())
+                    print("value2", value.split()[0])
+                    print("value3", value.split())
+                    print(value.split(':')[0].strip() == username)
+                    if value.split(":")[0].strip() == username:
+                        p = 0
+                        na = f'mess{str(p)}'
+                        na = Message(canvas, text=value, bg="green", width=150)
+                        canvas.create_window(400, n, anchor='nw', window=na)
+                        n += 80
+                        print("n", n)
+                        p += 1
+                        window.update()
+                        canvas.config(scrollregion=canvas.bbox("all"))
+                        canvas.yview_moveto(1)
+
+                    else:
+                        k = 0
+                        na = f'mess{str(k)}'
+                        na = Message(canvas, text=value, bg="white", width=300)
+                        canvas.create_window(100, n, anchor='nw', window=na)
+                        n += 80
+                        print("n", n)
+                        k += 1
+                        window.update()
+                        canvas.config(scrollregion=canvas.bbox("all"))
+                        canvas.yview_moveto(1)
 
             print(selection)
             print(names[int(selection)])
             current_selection = selection
-            textCons.config(state=DISABLED)
             return
     except Exception as e:
+        print("selection", selection)
+        print("currentselect", current_selection)
         print('handle user: ', e)
+        if str(e) == "invalid literal for int() with base 10: ')'":
+            print("true here bro")
+            message_entry.config(state=DISABLED)
+            current_selection = 5000
+        else:
+            print(names[int(selection)])
+            current_selection = selection
 
 
-def update_listbox(users_frame=None ):
+def update_listbox():
+    """
+    this is used to update ath active users list based on the active users
+    :return: none
+    """
     global lbox
     lbox.insert(END, names[-1])
-    # while True:
-    #     time.sleep(5)
-    #     pnames = StringVar(value=names)
-    #     global lbox
-    #     lbox.destroy()
-    #
-    #     lbox = Listbox(users_frame,
-    #                    listvariable=pnames,
-    #                    font="Helvetica 20 bold",
-    #                    selectbackground="#17202A",
-    #                    justify='center',
-    #                    activestyle='dotbox',
-    #                    height=10)
-    #     try:
-    #         lbox.pack(fill=BOTH, expand=1, padx=8, pady=5)
-    #         lbox.bind('<<ListboxSelect>>', handle_user_select)
-    #     except Exception as e:
-    #         print("update lbox: ", e)
-    #         return
 
 
 def layout(name):
+    """
+    this is responsible for creating the gui of the chat app
+    :param name: this is the name of the current user placed at the top of the chat app
+    :return: none
+    """
     global message_entry
-    global textCons
     global messaging_box
     global lbox
+    global canvas
     messaging_box = True
     try:
         window.deiconify()
@@ -392,7 +551,7 @@ def layout(name):
         # users frame
         users_frame = tk.Frame(window, borderwidth=4, relief=tk.RAISED)
         message_button_frame = tk.Frame(window, borderwidth=4)
-        buttons_frame = tk.Frame(message_button_frame, borderwidth=4, bg="#ABB2B9")
+        buttons_frame = tk.Frame(message_button_frame, borderwidth=4)
         _messages = tk.Frame(message_button_frame, borderwidth=4)
 
         # function to place the user name
@@ -410,50 +569,18 @@ def layout(name):
                      bg="#ABB2B9")
         line.pack(fill=tk.X)
 
-        # message text widget
-        textCons = Text(_messages,
-                        bg="#17202A",
-                        fg="#EAECEE",
-                        font="Helvetica 14",
-                        padx=5,
-                        pady=5)
+        scroll = Scrollbar(_messages, orient=VERTICAL)
+        canvas = Canvas(_messages, borderwidth=4, bg="#17202A", yscrollcommand=scroll.set)
+        canvas.pack(fill=BOTH, expand=True, side=LEFT)
 
-        # textCons.pack(fill=tk.BOTH, expand=1)
-        # textCons.config(cursor="arrow")
-
-        # scrollbar widget
-        scrollbar = tk.Scrollbar(textCons)
-        scrollbar.pack(fill=tk.Y, side=RIGHT)
-        # scrollbar.place(relheight=1,
-        #                 relwidth=1,
-        #                 relx=1)
-        textCons.place(relheight=0.93,
-                       relwidth=1,
-                       rely=0.08)
-
-        scrollbar.config(command=textCons.yview)
-        textCons.config(cursor="arrow")
-        # textCons.config(state=DISABLED)
-
-        # canvas
-        # canvas = tk.Canvas(message_button_frame)
-        # scroll_y = tk.Scrollbar(message_button_frame, orient="vertical", command=canvas.yview)
-
-        # configure responsiveness
-        # users_frame.columnconfigure(0, weight=1)
-        # users_frame.columnconfigure(1, weight=1)
-        # users_frame.rowconfigure(0, weight=1)
-        # users_frame.rowconfigure(1, weight=1)
+        scroll.config(command=canvas.yview)
+        scroll.pack(fill=Y, side=RIGHT)
 
         message_button_frame.columnconfigure(0, weight=1)
         message_button_frame.columnconfigure(1, weight=1)
         message_button_frame.rowconfigure(0, minsize=20, weight=1)
         message_button_frame.rowconfigure(1, minsize=500, weight=1)
         message_button_frame.rowconfigure(2, minsize=10, weight=1)
-
-        buttons_frame.columnconfigure(0, weight=1)
-        buttons_frame.columnconfigure(1, weight=1)
-        buttons_frame.rowconfigure(0, weight=1)
 
         # griding frames
         users_frame.grid(row=0, column=0, sticky="nsew", columnspan=2)
@@ -466,34 +593,44 @@ def layout(name):
                        listvariable=pnames,
                        font="Helvetica 20 bold",
                        selectbackground="#17202A",
-                       justify='center',
+                       justify='left',
                        activestyle='dotbox',
                        height=10)
         users_label = tk.Label(users_frame,
                                text="Active Users",
                                borderwidth=2,
                                relief=tk.RIDGE, bg="#17202A", fg="white", font="Helvetica 15 bold", pady=5)
-        message_entry = tk.Entry(buttons_frame, width=39)
-        send_btn = tk.Button(buttons_frame,
-                             text="Send",
-                             width=20, bg="#17202A", fg="white", command=send_thread, font="Helvetica 10 bold")
+        message_entry = tk.Entry(buttons_frame, bd=0, width=39, font='verdana 15', bg="#ABB2B9", highlightthickness=0)
 
+        photo = PhotoImage(file="send1.png")
+        send_btn = tk.Button(buttons_frame,
+                             image=photo,
+                             borderwidth=0,
+                             width=50, fg="white", command=send_thread, font="Helvetica 10 bold", highlightthickness=0)
+
+        photo_2 = PhotoImage(file='attachment1.png')
         send_file = tk.Button(buttons_frame,
-                              text="Send File",
-                              bg="#17202A", fg="white", command=open_file, font="Helvetica 10 bold")
+                              image=photo_2,
+                              borderwidth=0,
+                              fg="white", command=open_file, font="Helvetica 10 bold", highlightthickness=0)
 
         # binding widgets
         users_label.pack(fill=BOTH)
-        send_btn.grid(row=0, column=1, columnspan=2, sticky="esw", pady=32, padx=4)
-        message_entry.grid(row=0, column=0, sticky="swe", pady=35, padx=2)
-        send_file.grid(row=0, columnspan=2, column=0, sticky="swe", padx=4, pady=5)
+        message_entry.pack(side=LEFT, padx=5, ipady=10)
+        send_btn.pack(side=RIGHT)
+        send_file.pack(side=RIGHT)
+
         message_entry.bind('<Return>', send_thread)
 
         lbox.pack(fill=BOTH, expand=1, padx=8, pady=5)
         lbox.bind('<<ListboxSelect>>', handle_user_select)
-        update_lisbox = Thread(target=update_listbox, args=(users_frame,))
+        lbox.selection_set(0)
+        lbox.see(0)
+        update_lisbox = Thread(target=update_listbox)
         update_lisbox.start()
 
+        window.update()
+        canvas.config(scrollregion=canvas.bbox("all"))
 
         window.mainloop()
     except Exception as e:
@@ -503,10 +640,3 @@ def layout(name):
 
 window.mainloop()
 
-# send_file_message("hello")
-# time.sleep(5)
-# send_file_message("it is I")
-# time.sleep(5)
-# send_file_message("the game master")
-# time.sleep(5)
-# send_file_message("{quit}")
