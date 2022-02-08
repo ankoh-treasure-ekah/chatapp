@@ -178,7 +178,7 @@ def receive_messages():
                             p = 0
                             na = f'mess{str(p)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="green",
-                                         width=150)
+                                         width=200)
                             canvas.create_window(400, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
@@ -190,8 +190,8 @@ def receive_messages():
                             k = 0
                             na = f'mess{str(k)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="white",
-                                         width=300)
-                            canvas.create_window(100, n, anchor='nw', window=na)
+                                         width=200)
+                            canvas.create_window(70, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
                             k += 1
@@ -203,7 +203,7 @@ def receive_messages():
                             p = 0
                             na = f'mess{str(p)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="green",
-                                         width=150)
+                                         width=200)
                             canvas.create_window(400, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
@@ -215,8 +215,8 @@ def receive_messages():
                             k = 0
                             na = f'mess{str(k)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="white",
-                                         width=150)
-                            canvas.create_window(100, n, anchor='nw', window=na)
+                                         width=200)
+                            canvas.create_window(70, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
                             k += 1
@@ -388,6 +388,7 @@ def send(*args):
         try:
             time.sleep(1)
             message = message_entry.get()
+            print("this is the length", len(message))
             if message:
                 if message.__contains__("file"):
                     pass
@@ -483,7 +484,7 @@ def handle_user_select(*args):
                     if value.split(":")[0].strip() == username:
                         p = 0
                         na = f'mess{str(p)}'
-                        na = Message(canvas, text=value, bg="green", width=150)
+                        na = Message(canvas, text=value, bg="green", width=200)
                         canvas.create_window(400, n, anchor='nw', window=na)
                         n += 80
                         print("n", n)
@@ -495,8 +496,8 @@ def handle_user_select(*args):
                     else:
                         k = 0
                         na = f'mess{str(k)}'
-                        na = Message(canvas, text=value, bg="white", width=300)
-                        canvas.create_window(100, n, anchor='nw', window=na)
+                        na = Message(canvas, text=value, bg="white", width=200)
+                        canvas.create_window(70, n, anchor='nw', window=na)
                         n += 80
                         print("n", n)
                         k += 1
@@ -528,6 +529,15 @@ def update_listbox():
     """
     global lbox
     lbox.insert(END, names[-1])
+
+
+def update(*args):
+    if int(len(message_entry.get())) >= 56:
+        my_list = list(message_entry.get())
+        print(my_list[-1])
+        message_entry.delete(message_entry.index("end") - 1)
+        # l_char = message_entry.get(message_entry.index("end") - 1)
+        print('yeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
 
 
 def layout(name):
@@ -620,6 +630,7 @@ def layout(name):
         send_btn.pack(side=RIGHT)
         send_file.pack(side=RIGHT)
 
+        message_entry.bind('<KeyPress>', update)
         message_entry.bind('<Return>', send_thread)
 
         lbox.pack(fill=BOTH, expand=1, padx=8, pady=5)
