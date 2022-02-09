@@ -6,6 +6,8 @@ import os
 import tkinter as tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter import *
+from tkinter.messagebox import *
+from tkinter import ttk
 import json
 from datetime import datetime
 from colorama import init, Fore
@@ -116,6 +118,8 @@ except Exception as e:
     server_active = False
     quit()
 
+def test():
+    arrange()
 
 def receive_messages():
     """
@@ -150,17 +154,10 @@ def receive_messages():
                 index = names.index(person_who_left.strip())
                 lbox.delete(index)
 
-            if msg.__contains__("just sent a file"):
-                msg = msg.split()
-                file_size = msg[-1]
-                file_name = msg[-2]
-                na.bind("<Double-Button-1>", button_open_file)
-                # print(msg)
-                # __receiving_file_thread = Thread(target=__receiving_file, args=(file_name, file_size, ))
-                # __receiving_file_thread.start()
-                __receiving_file(file_name, file_size)
+
 
             if msg.__contains__(":"):
+                print('about printing teh data to canvas')
                 s_name = msg.split(":")[0]
                 day = datetime.now().strftime("%A")
                 month = datetime.now().strftime("%B")
@@ -178,7 +175,7 @@ def receive_messages():
                             p = 0
                             na = f'mess{str(p)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="green",
-                                         width=150)
+                                         width=220)
                             canvas.create_window(400, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
@@ -190,8 +187,8 @@ def receive_messages():
                             k = 0
                             na = f'mess{str(k)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="white",
-                                         width=300)
-                            canvas.create_window(100, n, anchor='nw', window=na)
+                                         width=220)
+                            canvas.create_window(70, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
                             k += 1
@@ -203,7 +200,7 @@ def receive_messages():
                             p = 0
                             na = f'mess{str(p)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="green",
-                                         width=150)
+                                         width=220)
                             canvas.create_window(400, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
@@ -215,8 +212,8 @@ def receive_messages():
                             k = 0
                             na = f'mess{str(k)}'
                             na = Message(canvas, text=f'{msg}\n{day}/{day_num}/{month}/{year}/ {time}', bg="white",
-                                         width=150)
-                            canvas.create_window(100, n, anchor='nw', window=na)
+                                         width=220)
+                            canvas.create_window(70, n, anchor='nw', window=na)
                             n += 80
                             print("n", n)
                             k += 1
@@ -237,6 +234,17 @@ def receive_messages():
                 else:
 
                     create_message_file(s_name, msg)
+
+            if msg.__contains__("just sent a file"):
+                msg = msg.split()
+                file_size = msg[-3]
+                file_name = msg[-4]
+                na.bind("<Double-Button-1>", button_open_file)
+                # print(msg)
+                # __receiving_file_thread = Thread(target=__receiving_file, args=(file_name, file_size, ))
+                # __receiving_file_thread.start()
+                __receiving_file(file_name, file_size)
+
         except Exception as e:
             print("you have been disconnected")
             server_active = False
@@ -321,12 +329,55 @@ def __receiving_file(file_name: str, file_size: str):
     print("finished receiving file")
 
 
+# def progress(size, bar, data):
+#     # print('data', data)
+#     if bar['value'] != size:
+#         bar['value'] += len(data)
+#         bar.update()
+#     else:
+#         showinfo(message='the process completed')
+
+currentValue = 0
+file_size = 100
+
+
+def progress(size, bar, added):
+    global currentValue
+    if bar['value'] != size:
+        currentValue = currentValue+added
+        # value_label['text'] = update_progress_label()
+        bar["value"] = currentValue
+        bar.update() # Force an update of the GUI
+
+d = 0
+def arrange():
+    global n, d
+    global pb
+    print('tey')
+    pb = f'pb{str(d)}'
+    pb = ttk.Progressbar(master=canvas,
+                         orient='horizontal',
+                         mode='determinate',
+                         length=200
+                        )
+
+    # pb["maximum"] = 86000
+    # pb['value'] += currentValue
+    canvas.create_window(400, n, anchor='nw', window=pb)
+    n += 80
+    d += 1
+    # for i in range(180):
+    #     time.sleep(0.5)
+    #     progress(file_size, pb)
+
+
 def __sending_file(filepath: str):
     """
     this script sends files to the server which sends to other clients in the chat
     :param filepath: this the location of the file in the hard dive
     :return: none
     """
+    global n
     if sending_file:
         try:
             selection = str(lbox.curselection())
@@ -336,17 +387,45 @@ def __sending_file(filepath: str):
             send_file_message(f"sending {name}")
             file_name = os.path.basename(filepath)
             file_size = os.path.getsize(filepath)
+            num_rounds = round(file_size/BUFSIZE)
             print(f"file size: {file_size}")
             send_file_message(file_name)
             time.sleep(2)
             send_file_message(str(file_size))
             time.sleep(1)
             size = 0
+            # pb = ttk.Progressbar(master=canvas,
+            #                      orient='horizontal',
+            #                      mode='determinate',
+            #                      length=100
+            #                      )
+            #
+            # pb["maximum"] = 100
+            # pb['value'] += currentValue
+            # canvas.create_window(400, n, anchor='nw', window=pb)
+            # n += 80
+            # arrange()
+
+            test_threas = Thread(target=test)
+            test_threas.start()
+            time.sleep(0.5)
+            pb["maximum"] = file_size
+            pb['value'] += currentValue
             with open(file_name, "rb") as file:
                 while size <= file_size:
                     data = file.read(BUFSIZE)
                     if not data:
                         break
+
+                    # progress(file_size, pb, data)
+
+                    # progress_thread = Thread(target=progress, args=(file_size, pb, data,))
+                    # progress_thread.start()
+
+                    # for i in range(num_rounds):
+                    # time.sleep(0.5)
+                    result = progress(file_size, pb, len(data))
+                    # if result == "finish"
                     send_thread_2 = Thread(target=send_file_message, args=(data, True, ))
                     send_thread_2.start()
                     # send_file_message(data, True)
@@ -367,8 +446,14 @@ def open_file():
     )
     if not filepath:
         return
+
+
+    # test_threas = Thread(target=test)
+    # test_threas.start()
     __sending_file_thread = Thread(target=__sending_file, args=(filepath, ))
     __sending_file_thread.start()
+
+
 
 
 def send_thread(*args):
@@ -483,7 +568,7 @@ def handle_user_select(*args):
                     if value.split(":")[0].strip() == username:
                         p = 0
                         na = f'mess{str(p)}'
-                        na = Message(canvas, text=value, bg="green", width=150)
+                        na = Message(canvas, text=value, bg="green", width=220)
                         canvas.create_window(400, n, anchor='nw', window=na)
                         n += 80
                         print("n", n)
@@ -495,8 +580,8 @@ def handle_user_select(*args):
                     else:
                         k = 0
                         na = f'mess{str(k)}'
-                        na = Message(canvas, text=value, bg="white", width=300)
-                        canvas.create_window(100, n, anchor='nw', window=na)
+                        na = Message(canvas, text=value, bg="white", width=220)
+                        canvas.create_window(70, n, anchor='nw', window=na)
                         n += 80
                         print("n", n)
                         k += 1
@@ -529,6 +614,13 @@ def update_listbox():
     global lbox
     lbox.insert(END, names[-1])
 
+def update(*args):
+    if int(len(message_entry.get())) >= 56:
+        my_list = list(message_entry.get())
+        print(my_list[-1])
+        message_entry.delete(message_entry.index("end") - 1)
+        # l_char = message_entry.get(message_entry.index("end") - 1)
+        print('yeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
 
 def layout(name):
     """
@@ -620,6 +712,7 @@ def layout(name):
         send_btn.pack(side=RIGHT)
         send_file.pack(side=RIGHT)
 
+        message_entry.bind('<KeyPress>', update)
         message_entry.bind('<Return>', send_thread)
 
         lbox.pack(fill=BOTH, expand=1, padx=8, pady=5)
