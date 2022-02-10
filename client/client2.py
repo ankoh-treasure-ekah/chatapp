@@ -17,7 +17,6 @@ init()
 blue = Fore.BLUE
 green = Fore.GREEN
 
-
 window = tk.Tk()
 window.withdraw()
 # window.deiconify()
@@ -118,8 +117,14 @@ except Exception as e:
     server_active = False
     quit()
 
+
 def test():
-    arrange()
+    arrange_send()
+
+
+def test_receive():
+    arrange_receive()
+
 
 def receive_messages():
     """
@@ -153,8 +158,6 @@ def receive_messages():
                 person_who_left = msg.split()[0]
                 index = names.index(person_who_left.strip())
                 lbox.delete(index)
-
-
 
             if msg.__contains__(":"):
                 print('about printing teh data to canvas')
@@ -304,6 +307,39 @@ def begin_receive_thread(username):
     time.sleep(5)
 
 
+def progress_receive(size, bar, added):
+    global currentValue
+    if bar['value'] != size:
+        currentValue = currentValue + added
+        # value_label['text'] = update_progress_send_label()
+        bar["value"] = currentValue
+        bar.update()  # Force an update of the GUI
+
+
+j = 0
+
+
+def arrange_receive():
+    global n, j
+    global pb_receive
+    print('tey')
+    pb_receive = f'pb{str(j)}'
+    pb_receive = ttk.Progressbar(master=canvas,
+                                 orient='horizontal',
+                                 mode='determinate',
+                                 length=200
+                                 )
+
+    # pb["maximum"] = 86000
+    # pb['value'] += currentValue
+    canvas.create_window(70, n, anchor='nw', window=pb_receive)
+    n += 80
+    j += 1
+    window.update()
+    canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.yview_moveto(1)
+
+
 def __receiving_file(file_name: str, file_size: str):
     """
     this function receives files from  server and stores them in the same directory the client script is stored
@@ -312,14 +348,30 @@ def __receiving_file(file_name: str, file_size: str):
     :return: none
     """
     try:
+        global n, currentValue
+
+        selection = str(lbox.curselection())
+        selection = selection[1]
+        name = names[int(selection)]
+
         size = 0
         # file_name = client_socket.recv(BUFSIZE).decode("utf-8")
         # file_size = client_socket.recv(BUFSIZE).decode("utf-8")
+        test_threas = Thread(target=test_receive)
+        test_threas.start()
+        time.sleep(0.5)
+        pb_receive["maximum"] = file_size
+        currentValue = 0
+        pb_receive['value'] += currentValue
+
         with open(file_name, "wb") as file:
             while size < int(file_size):
                 data = client_socket.recv(BUFSIZE)
                 if not data:
                     break
+
+                progress_receive(file_size, pb_receive, len(data))
+
                 file.write(data)
                 size += len(data)
                 print(len(data))
@@ -329,7 +381,7 @@ def __receiving_file(file_name: str, file_size: str):
     print("finished receiving file")
 
 
-# def progress(size, bar, data):
+# def progress_send(size, bar, data):
 #     # print('data', data)
 #     if bar['value'] != size:
 #         bar['value'] += len(data)
@@ -341,16 +393,19 @@ currentValue = 0
 file_size = 100
 
 
-def progress(size, bar, added):
+def progress_send(size, bar, added):
     global currentValue
     if bar['value'] != size:
-        currentValue = currentValue+added
-        # value_label['text'] = update_progress_label()
+        currentValue = currentValue + added
+        # value_label['text'] = update_progress_send_label()
         bar["value"] = currentValue
-        bar.update() # Force an update of the GUI
+        bar.update()  # Force an update of the GUI
+
 
 d = 0
-def arrange():
+
+
+def arrange_send():
     global n, d
     global pb
     print('tey')
@@ -359,16 +414,16 @@ def arrange():
                          orient='horizontal',
                          mode='determinate',
                          length=200
-                        )
+                         )
 
     # pb["maximum"] = 86000
     # pb['value'] += currentValue
     canvas.create_window(400, n, anchor='nw', window=pb)
     n += 80
     d += 1
-    # for i in range(180):
-    #     time.sleep(0.5)
-    #     progress(file_size, pb)
+    window.update()
+    canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.yview_moveto(1)
 
 
 def __sending_file(filepath: str):
@@ -377,7 +432,7 @@ def __sending_file(filepath: str):
     :param filepath: this the location of the file in the hard dive
     :return: none
     """
-    global n
+    global n, currentValue
     if sending_file:
         try:
             selection = str(lbox.curselection())
@@ -387,14 +442,14 @@ def __sending_file(filepath: str):
             send_file_message(f"sending {name}")
             file_name = os.path.basename(filepath)
             file_size = os.path.getsize(filepath)
-            num_rounds = round(file_size/BUFSIZE)
+            num_rounds = round(file_size / BUFSIZE)
             print(f"file size: {file_size}")
             send_file_message(file_name)
             time.sleep(2)
             send_file_message(str(file_size))
             time.sleep(1)
             size = 0
-            # pb = ttk.Progressbar(master=canvas,
+            # pb = ttk.progress_sendbar(master=canvas,
             #                      orient='horizontal',
             #                      mode='determinate',
             #                      length=100
@@ -404,12 +459,13 @@ def __sending_file(filepath: str):
             # pb['value'] += currentValue
             # canvas.create_window(400, n, anchor='nw', window=pb)
             # n += 80
-            # arrange()
+            # arrange_send()
 
             test_threas = Thread(target=test)
             test_threas.start()
             time.sleep(0.5)
             pb["maximum"] = file_size
+            currentValue = 0
             pb['value'] += currentValue
             with open(file_name, "rb") as file:
                 while size <= file_size:
@@ -417,16 +473,13 @@ def __sending_file(filepath: str):
                     if not data:
                         break
 
-                    # progress(file_size, pb, data)
-
-                    # progress_thread = Thread(target=progress, args=(file_size, pb, data,))
-                    # progress_thread.start()
-
+                    # progress_send(file_size, pb, data)
                     # for i in range(num_rounds):
                     # time.sleep(0.5)
-                    result = progress(file_size, pb, len(data))
-                    # if result == "finish"
-                    send_thread_2 = Thread(target=send_file_message, args=(data, True, ))
+                    progress_send(file_size, pb, len(data))
+                    # progress_send_thread = Thread(target=progress_send, args=(file_size, pb, len(data), ))
+                    # progress_send_thread.start()
+                    send_thread_2 = Thread(target=send_file_message, args=(data, True,))
                     send_thread_2.start()
                     # send_file_message(data, True)
                     size += len(data)
@@ -447,13 +500,10 @@ def open_file():
     if not filepath:
         return
 
-
     # test_threas = Thread(target=test)
     # test_threas.start()
-    __sending_file_thread = Thread(target=__sending_file, args=(filepath, ))
+    __sending_file_thread = Thread(target=__sending_file, args=(filepath,))
     __sending_file_thread.start()
-
-
 
 
 def send_thread(*args):
@@ -482,7 +532,7 @@ def send(*args):
                 name = names[int(selection)]
                 fmessage = f'{message} {name}'
 
-                real_send_thread = Thread(target=send_file_message, args=(fmessage, ))
+                real_send_thread = Thread(target=send_file_message, args=(fmessage,))
                 real_send_thread.start()
                 # send_file_message(fmessage)
                 print(fmessage)
@@ -614,6 +664,7 @@ def update_listbox():
     global lbox
     lbox.insert(END, names[-1])
 
+
 def update(*args):
     if int(len(message_entry.get())) >= 56:
         my_list = list(message_entry.get())
@@ -621,6 +672,28 @@ def update(*args):
         message_entry.delete(message_entry.index("end") - 1)
         # l_char = message_entry.get(message_entry.index("end") - 1)
         print('yeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
+
+
+def bound_to_mousewheel(event):
+    canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+
+def unbound_mousewheel(event):
+    canvas.unbind_all("<MouseWheel>")
+
+
+def on_mousewheel(event):
+    canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+    print(-1*(event.delta/120))
+    print('event delta', event.delta)
+
+
+def callback():
+    client_socket.send(bytes("{quit}", "utf-8"))
+    time.sleep(0.5)
+    window.destroy()
+
+
 
 def layout(name):
     """
@@ -719,11 +792,16 @@ def layout(name):
         lbox.bind('<<ListboxSelect>>', handle_user_select)
         lbox.selection_set(0)
         lbox.see(0)
+        canvas.bind('<Enter>', bound_to_mousewheel)
+        canvas.bind('<Leave>', unbound_mousewheel)
         update_lisbox = Thread(target=update_listbox)
         update_lisbox.start()
 
+        window.protocol("WM_DELETE_WINDOW", callback)
+
         window.update()
         canvas.config(scrollregion=canvas.bbox("all"))
+
 
         window.mainloop()
     except Exception as e:
@@ -732,4 +810,3 @@ def layout(name):
 
 
 window.mainloop()
-

@@ -55,6 +55,7 @@ def broadcast(msg, name, receiver: str = None):
                         for person in persons:
                             if person.name == name:
                                 client = person.client
+                                print('sending to sender')
                                 client.send(bytes(name + ": you transferred ", "utf-8") + bytes(file_name, "utf-8")
                                             + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
                     except Exception as e:
@@ -66,8 +67,15 @@ def broadcast(msg, name, receiver: str = None):
                     client = person.client
                     file_name = msg
                     file_size = os.path.getsize(file_name)
+
+                    if person.name == name:
+                        client.send(bytes(name + ": you transferred ", "utf-8") + bytes(file_name, "utf-8")
+                                    + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
+                        continue
+
                     client.send(bytes(name + ": just sent a file ", "utf-8") + bytes(file_name, "utf-8")
                                 + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
+
                     with open(file_name, "rb") as file:
                         size = 0
                         while size <= file_size:
@@ -77,6 +85,7 @@ def broadcast(msg, name, receiver: str = None):
                             client.sendall(bytes(data))
                     print("transfer completed...")
                     receiving_file = False
+
                 except Exception as e:
                     print("[ERROR] broadcast files", e)
                     receiving_file = False
@@ -198,6 +207,7 @@ def client_communication(person):
             if msg == bytes("{quit}", "utf-8"):
                 persons.remove(person)
                 msg = bytes(name + " has left the chat", "utf-8")
+                print(msg)
                 client.close()
                 broadcast(msg, "")
 
