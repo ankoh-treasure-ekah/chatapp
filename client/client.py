@@ -10,12 +10,12 @@ from tkinter.messagebox import *
 from tkinter import ttk
 import json
 from datetime import datetime
-from colorama import init, Fore
+# from colorama import init, Fore
 
-init()
+# init()
 
-blue = Fore.BLUE
-green = Fore.GREEN
+# blue = Fore.BLUE
+# green = Fore.GREEN
 
 window = tk.Tk()
 window.withdraw()
@@ -92,9 +92,10 @@ pnames = StringVar(value=names)
 
 # Global constants
 PORT = 5500
-HOST = "localhost"
+HOST = "192.168.100.38"
 ADDR = (HOST, PORT)
 BUFSIZE = 1024
+BUFSIZE_file = 16384
 
 # Global variables
 
@@ -141,7 +142,7 @@ def receive_messages():
             msg = client_socket.recv(BUFSIZE).decode("utf-8")
             messages.append(msg)
             print("reeveied", msg)
-            if msg.split()[0] == "true":
+            if msg.split()[0] == "{true}":
                 if names.__contains__(msg.split()[1]):
                     pass
                 else:
@@ -154,10 +155,12 @@ def receive_messages():
 
             print(names)
 
-            if msg.__contains__("has left"):
+            if msg.__contains__("{has left the chat}"):
                 person_who_left = msg.split()[0]
                 index = names.index(person_who_left.strip())
                 lbox.delete(index)
+                names.remove(person_who_left.strip())
+                print(names)
 
             if msg.__contains__(":"):
                 print('about printing teh data to canvas')
@@ -238,7 +241,7 @@ def receive_messages():
 
                     create_message_file(s_name, msg)
 
-            if msg.__contains__("just sent a file"):
+            if msg.__contains__("{just sent a file}"):
                 msg = msg.split()
                 file_size = msg[-3]
                 file_name = msg[-4]
@@ -366,7 +369,7 @@ def __receiving_file(file_name: str, file_size: str):
 
         with open(file_name, "wb") as file:
             while size < int(file_size):
-                data = client_socket.recv(BUFSIZE)
+                data = client_socket.recv(BUFSIZE_file)
                 if not data:
                     break
 
@@ -438,12 +441,14 @@ def __sending_file(filepath: str):
             selection = str(lbox.curselection())
             selection = selection[1]
             name = names[int(selection)]
-
-            send_file_message(f"sending {name}")
+            sending = "{sending}"
+            send_file_message(f"{sending} {name}")
             file_name = os.path.basename(filepath)
             file_size = os.path.getsize(filepath)
             num_rounds = round(file_size / BUFSIZE)
             print(f"file size: {file_size}")
+            print('file path', filepath)
+            print('filename', file_name)
             send_file_message(file_name)
             time.sleep(2)
             send_file_message(str(file_size))
@@ -467,9 +472,9 @@ def __sending_file(filepath: str):
             pb["maximum"] = file_size
             currentValue = 0
             pb['value'] += currentValue
-            with open(file_name, "rb") as file:
+            with open(filepath, "rb") as file:
                 while size <= file_size:
-                    data = file.read(BUFSIZE)
+                    data = file.read(BUFSIZE_file)
                     if not data:
                         break
 

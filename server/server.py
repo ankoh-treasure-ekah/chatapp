@@ -5,12 +5,13 @@ from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 import datetime
 from person import Person
-from ipparser import ipparser
+# from ipparser import ipparser
 
 # Global constants
-Host = "localhost"
+Host = "192.168.100.38"
 PORT = 5500
 BUFSIZE = 1024
+BUFSIZE_file = 16384
 ADDR = (Host, PORT)
 SERVER = socket(AF_INET, SOCK_STREAM)
 
@@ -39,12 +40,12 @@ def broadcast(msg, name, receiver: str = None):
                         client = person.client
                         file_name = msg
                         file_size = os.path.getsize(file_name)
-                        client.send(bytes(name + ": just sent a file ", "utf-8") + bytes(file_name, "utf-8")
+                        client.send(bytes(name + ": {just sent a file} ", "utf-8") + bytes(file_name, "utf-8")
                                     + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
                         with open(file_name, "rb") as file:
                             size = 0
                             while size <= file_size:
-                                data = file.read(BUFSIZE)
+                                data = file.read(BUFSIZE_file)
                                 if not data:
                                     break
                                 client.sendall(bytes(data))
@@ -73,13 +74,13 @@ def broadcast(msg, name, receiver: str = None):
                                     + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
                         continue
 
-                    client.send(bytes(name + ": just sent a file ", "utf-8") + bytes(file_name, "utf-8")
+                    client.send(bytes(name + ": {just sent a file} ", "utf-8") + bytes(file_name, "utf-8")
                                 + bytes(" ", "utf-8") + bytes(str(file_size), "utf-8"))
 
                     with open(file_name, "rb") as file:
                         size = 0
                         while size <= file_size:
-                            data = file.read(BUFSIZE)
+                            data = file.read(BUFSIZE_file)
                             if not data:
                                 break
                             client.sendall(bytes(data))
@@ -125,7 +126,7 @@ def broadcast(msg, name, receiver: str = None):
 
 def uni_send_name(client, msg):
     print("unisendname_msg", msg)
-    client.send(bytes("true " + msg, "utf-8"))
+    client.send(bytes("{true} " + msg, "utf-8"))
     print('unisendname', "done")
 
 
@@ -206,12 +207,14 @@ def client_communication(person):
             print(f"{name}: ", msg.decode("utf-8"))
             if msg == bytes("{quit}", "utf-8"):
                 persons.remove(person)
-                msg = bytes(name + " has left the chat", "utf-8")
+                names.remove(name)
+                msg = bytes(name + " {has left the chat}", "utf-8")
+                broadcast(msg, "")
                 print(msg)
                 client.close()
-                broadcast(msg, "")
+                # broadcast(msg, "")
 
-            elif msg.__contains__(bytes("sending", "utf-8")):
+            elif msg.__contains__(bytes("{sending}", "utf-8")):
                 try:
                     print("receiving set to true")
                     receiving_file = True
@@ -232,7 +235,7 @@ def client_communication(person):
                         print(f"file size {file_size}")
                         with open(file_name, "wb") as file:
                             while size < int(file_size):
-                                data = client.recv(BUFSIZE)
+                                data = client.recv(BUFSIZE_file)
                                 if not data:
                                     break
                                 file.write(data)
@@ -271,9 +274,16 @@ def client_communication(person):
             print(msg.decode("utf-8"))
             # broadcast(msg, "")
             print("[EXCEPTION] client_communication ", e)
-            msg = bytes(name + " has left the chat", "utf-8")
+            msg = bytes(name + " {has left the chat}", "utf-8")
+            try:
+                persons.remove(person)
+                name.remove(name)
+            except Exception as e:
+                pass
+            print(persons)
+            print(names)
             print(msg)
-            broadcast(msg, "")
+            # broadcast(msg, "")
             break
 
 
